@@ -1,4 +1,4 @@
-# BESTie 繁體中文字幕觀看頁（臨時專案）
+# BESTie 繁體中文字幕觀看頁
 
 獨立保存 BESTie 電台訪談觀看頁。影片使用 SBS 原始 YouTube 嵌入播放器，未包含影音檔案。
 
@@ -28,4 +28,4 @@ python3 -m http.server 8765
 | `app.js` | 播放、同步字幕與控制邏輯 |
 | `subtitles.json` | 以秒計算的中韓字幕時間軸 |
 
-這是臨時儲存庫，不會自動刪除。GitHub 儲存原始碼；既有 Sites 觀看網址的部署仍獨立管理。
+此頁位於 `temporary_webpages/bestie/`。`temporary_webpages` 是各類臨時網頁的集合，不會自動刪除。GitHub 儲存原始碼；既有 Sites 觀看網址的部署仍獨立管理。
