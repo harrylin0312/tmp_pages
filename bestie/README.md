@@ -48,3 +48,9 @@ python3 -m http.server 8765
 - 可留在原生模式繼續觀看。進出原生設定沿用同一個播放器，不銷毀 iframe、不重載影片，也不主動調整進度、畫質或播放狀態。
 - 原生畫質選單實測可選 1080p；實際選項以影片與 YouTube 提供內容為準。
 - 官方 API 不支援程式直接指定畫質，因此沒有使用無效的自訂解析度選單。參考：https://developers.google.com/youtube/iframe_api_revision_history
+
+## 橫屏比例
+
+影片依可見視窗維持 16:9 並置中，不拉伸或裁切；Safari 工具列變動時重新計算。版面檢查：`node --test bestie/video-layout.test.cjs`。
+
+保留原生畫質控制的同一個播放器，YouTube 可能於跳轉時顯示原生介面；跨網域頁面無法代點其內部控制，官方 API 也未提供收起控制列的指令。

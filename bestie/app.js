@@ -86,7 +86,7 @@ function applyInputMode(){
  stage.classList.toggle('native-mode',nativeMode);wrap.inert=!nativeMode;wrap.setAttribute('aria-hidden',String(!nativeMode));
  if(iframe){iframe.inert=!nativeMode;iframe.tabIndex=nativeMode?0:-1}
  $('viewer-surface').disabled=nativeMode;$('viewer-surface').inert=nativeMode;$('native-bar').hidden=!nativeMode;
- setChrome(!nativeMode);
+ setChrome(!nativeMode);updateVideoLayout();
 }
 function changeInputMode(next){
  if(next===nativeMode||!ready)return;
@@ -107,3 +107,18 @@ function initPlayer({time=0,playing=false,rate=Number($('speed').value)}={}){
 }
 window.onYouTubeIframeAPIReady=()=>initPlayer();
 fetch('subtitles.json').then(r=>{if(!r.ok)throw new Error('字幕載入失敗');return r.json()}).then(data=>{cues=data;render();update(true)}).catch(()=>{$('zh').textContent='字幕載入失敗，請重新整理頁面。';$('status').textContent='無法載入字幕檔案。'});const script=document.createElement('script');script.src='https://www.youtube.com/iframe_api';script.onerror=()=>{$('status').textContent='YouTube 播放器載入失敗，請檢查網路或使用原片連結。'};document.head.append(script);
+
+function updateVideoLayout(){
+ const viewport=window.visualViewport,root=document.documentElement;
+ for(const [key,value] of Object.entries({left:viewport?.offsetLeft||0,top:viewport?.offsetTop||0,width:viewport?.width||innerWidth,height:viewport?.height||innerHeight}))root.style.setProperty('--viewport-'+key,value+'px');
+ const fitted=document.body.classList.contains('focus-view')||stage.classList.contains('theater')||document.fullscreenElement===stage||document.webkitFullscreenElement===stage||nativeMode;
+ stage.classList.toggle('fitted-video',fitted);
+ if(!fitted)return;
+ const rect=fitVideo(stage.clientWidth,stage.clientHeight,nativeMode?42:0);
+ for(const [key,value] of Object.entries(rect))stage.style.setProperty('--video-'+key,value+'px');
+}
+new ResizeObserver(updateVideoLayout).observe(stage);
+for(const event of ['resize','orientationchange'])window.addEventListener(event,updateVideoLayout);
+for(const event of ['resize','scroll'])window.visualViewport?.addEventListener(event,updateVideoLayout);
+for(const event of ['fullscreenchange','webkitfullscreenchange'])document.addEventListener(event,updateVideoLayout);
+updateVideoLayout();

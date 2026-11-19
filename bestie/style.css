@@ -114,3 +114,6 @@ body.theater-open{overflow:hidden}
 #stage.native-mode{min-height:260px}
 #stage.native-mode:not(:fullscreen):not(.theater){aspect-ratio:16/10}
 body.focus-view #stage.native-mode{aspect-ratio:auto}
+/* Keep the source at 16:9 inside the actual visible Safari viewport. */
+body.focus-view #stage,#stage.theater{inset:auto!important;left:var(--viewport-left,0px);top:var(--viewport-top,0px);width:var(--viewport-width,100vw);height:var(--viewport-height,100dvh)}
+#stage.fitted-video .video-wrap{position:absolute!important;inset:auto!important;left:var(--video-left)!important;top:var(--video-top)!important;width:var(--video-width)!important;height:var(--video-height)!important;max-height:none!important;aspect-ratio:16/9!important;transform:none!important}
