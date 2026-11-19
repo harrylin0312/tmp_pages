@@ -29,3 +29,14 @@ python3 -m http.server 8765
 | `subtitles.json` | 以秒計算的中韓字幕時間軸 |
 
 此頁位於 `tmp_pages/bestie/`。`tmp_pages` 是各類臨時網頁的集合，不會自動刪除。GitHub 儲存原始碼，並使用 GitHub Pages 發布觀看頁。
+
+## 播放操作
+
+- 點一下畫面：播放／暫停。
+- 左側雙擊：倒退 5 秒；右側雙擊：快轉 5 秒。連續點擊同側可累加。
+- 暫停時快轉／倒退，會保留暫停狀態。
+- 拖曳紅色進度列跳轉，齒輪內可調整字幕大小與韓文顯示。
+- 全螢幕使用瀏覽器 Fullscreen API；不支援時改用保留字幕的全視窗模式。
+- 鍵盤：空白鍵或 K 播放／暫停、左右鍵移動 5 秒、F 切換全螢幕。
+
+手勢檢查：`node --test bestie/player-gestures.test.cjs`。
