@@ -60,7 +60,7 @@ function skipSeconds(delta){
  feedback.classList.remove('flash');void feedback.offsetWidth;feedback.classList.add('flash');clearTimeout(feedbackTimer);feedbackTimer=setTimeout(()=>{feedback.classList.remove('flash');feedbackTotal=0;feedbackDirection=0},750);
  setChrome(true);
 }
-const gestures=createPlayerGestures({togglePlayback:()=>{$('play').click();setChrome(true)},seekBy:skipSeconds,onInteraction:()=>{$('viewer-panel').hidden=true;$('viewer-settings').setAttribute('aria-expanded','false');setChrome(true)}});
+const gestures=createPlayerGestures({onSingleTap:()=>setChrome(!stage.classList.contains('controls-visible')),seekBy:skipSeconds,onInteraction:()=>{$('viewer-panel').hidden=true;$('viewer-settings').setAttribute('aria-expanded','false');clearTimeout(chromeTimer)}});
 bindPlayerSurface($('viewer-surface'),gestures);
 $('viewer-center-play').onclick=()=>{gestures.reset();$('play').click();setChrome(true)};
 $('viewer-settings').onclick=()=>{const open=$('viewer-panel').hidden;$('viewer-panel').hidden=!open;$('viewer-settings').setAttribute('aria-expanded',String(open));setChrome(true)};
@@ -90,18 +90,16 @@ function applyInputMode(){
 }
 function changeInputMode(next){
  if(next===nativeMode||!ready)return;
- const time=player.getCurrentTime(),playing=player.getPlayerState()===1,rate=player.getPlaybackRate();
- gestures.reset();scrubbing=false;$('viewer-panel').hidden=true;$('viewer-settings').setAttribute('aria-expanded','false');clearTimeout(chromeTimer);clearInterval(updateTimer);ready=false;nativeMode=next;
- playerGeneration++;player.destroy();const host=document.createElement('div');host.id='player';stage.querySelector('.video-wrap').replaceChildren(host);player=null;
- initPlayer({time,playing,rate});applyInputMode();
+ gestures.reset();scrubbing=false;$('viewer-panel').hidden=true;$('viewer-settings').setAttribute('aria-expanded','false');clearTimeout(chromeTimer);
+ nativeMode=next;applyInputMode();
 }
 $('open-native').onclick=()=>changeInputMode(true);
 $('close-native').onclick=()=>changeInputMode(false);
 function initPlayer({time=0,playing=false,rate=Number($('speed').value)}={}){
  const generation=++playerGeneration;nativeCaptionsInitialized=false;
- player=new YT.Player('player',{videoId:'lZVbK5Iz-_A',playerVars:{controls:nativeMode?1:0,disablekb:nativeMode?0:1,playsinline:1,rel:0,fs:0,cc_load_policy:0,start:Math.floor(time),origin:location.origin},events:{
+ player=new YT.Player('player',{videoId:'lZVbK5Iz-_A',playerVars:{controls:1,disablekb:0,playsinline:1,rel:0,fs:0,cc_load_policy:0,start:Math.floor(time),origin:location.origin},events:{
  onApiChange:()=>{if(generation===playerGeneration&&(!nativeMode||!nativeCaptionsInitialized))hideNativeCaptions()},
- onReady:()=>{if(generation!==playerGeneration)return;ready=true;hideNativeCaptions();player.setPlaybackRate(rate);if(time>0)player.seekTo(time,true);if(playing)player.playVideo();applyInputMode();syncPlaybackUI();$('status').textContent='點一下播放或暫停；左右雙擊移動 5 秒。齒輪內可進入 YouTube 畫質設定。';clearInterval(updateTimer);updateTimer=setInterval(()=>update(),120)},
+ onReady:()=>{if(generation!==playerGeneration)return;ready=true;hideNativeCaptions();player.setPlaybackRate(rate);if(time>0)player.seekTo(time,true);if(playing)player.playVideo();applyInputMode();syncPlaybackUI();$('status').textContent='點一下顯示或隱藏控制列；左右雙擊移動 5 秒。齒輪內可進入 YouTube 畫質設定。';clearInterval(updateTimer);updateTimer=setInterval(()=>update(),120)},
  onStateChange:e=>{if(generation!==playerGeneration)return;if(e.data===1&&(!nativeMode||!nativeCaptionsInitialized))hideNativeCaptions();$('play').textContent=e.data===1?'暫停':'播放';syncPlaybackUI();setChrome(true)},
  onError:e=>{if(generation===playerGeneration)$('status').textContent=`YouTube 播放器無法播放（${e.data}）。可使用上方原片連結。`}
  }});
