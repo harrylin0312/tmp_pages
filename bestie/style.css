@@ -99,3 +99,18 @@ body.focus-view #stage #ko{font-size:calc(var(--caption-size)*.65);line-height:1
 body.theater-open{overflow:hidden}
 @media(max-width:420px){.viewer-buttons button,#viewer-settings{min-width:36px;width:36px;padding:6px}.viewer-top{right:calc(max(12px,env(safe-area-inset-right)) + 38px)}#clock{font-size:11px;padding-left:3px}#viewer-center-play{width:58px;height:58px;padding:13px}}
 @media(prefers-reduced-motion:reduce){#seek-feedback.flash{animation:none;opacity:1}}
+/* Custom and native inputs are mutually exclusive, including focus and touch. */
+#stage:not(.native-mode) .video-wrap,#stage:not(.native-mode) .video-wrap iframe{pointer-events:none!important;user-select:none;-webkit-user-select:none}
+#viewer-surface{touch-action:none;-webkit-touch-callout:none;cursor:pointer}
+#viewer-chrome button,#viewer-chrome input{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#open-native{display:block!important;width:100%;height:auto;min-height:40px;padding:9px 12px!important;text-align:left;margin-bottom:10px;background:#ffffff14!important;border:0!important;border-radius:6px!important;font-size:14px}
+#native-bar[hidden]{display:none!important}
+#native-bar{position:absolute;inset:0 0 auto;height:42px;padding:4px max(10px,env(safe-area-inset-right)) 4px max(10px,env(safe-area-inset-left));z-index:5;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#141414;color:#ddd;font-size:12px}
+#close-native{min-height:32px;font-size:12px;padding:4px 10px;background:#303030;border-color:#555;white-space:nowrap}
+#stage.native-mode .video-wrap{position:absolute!important;inset:42px 0 0!important;width:100%!important;height:calc(100% - 42px)!important;aspect-ratio:auto!important;max-height:none!important;pointer-events:auto!important}
+#stage.native-mode .video-wrap iframe{pointer-events:auto!important}
+#stage.native-mode #viewer-surface,#stage.native-mode #viewer-chrome,#stage.native-mode #seek-feedback{display:none!important;pointer-events:none!important}
+#stage.native-mode #caption{bottom:60px!important;max-width:82%;pointer-events:none!important}
+#stage.native-mode{min-height:260px}
+#stage.native-mode:not(:fullscreen):not(.theater){aspect-ratio:16/10}
+body.focus-view #stage.native-mode{aspect-ratio:auto}

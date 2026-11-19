@@ -31,7 +31,7 @@ $('fullscreen').onclick=async()=>{
 };
 for(const name of ['fullscreenchange','webkitfullscreenchange'])document.addEventListener(name,syncFullscreenUI);
 document.addEventListener('keydown',e=>{
- if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)||e.target.isContentEditable)return;
+ if(nativeMode||e.target.closest('button,a,input,select,textarea,[contenteditable=true]'))return;
  if(e.key==='Escape'){$('stage').classList.remove('theater');syncFullscreenUI()}
  if(e.code==='Space'||e.key.toLowerCase()==='k'){e.preventDefault();$('play').click();setChrome(true)}
  if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();skipSeconds(e.key==='ArrowLeft'?-5:5)}
@@ -43,9 +43,10 @@ function render(){const frag=document.createDocumentFragment();buttons=[];let co
 $('search').addEventListener('input',()=>{query=$('search').value.trim().toLowerCase();render()});$('transcript').addEventListener('wheel',()=>lastFollow=Date.now(),{passive:true});$('transcript').addEventListener('touchstart',()=>lastFollow=Date.now(),{passive:true});
 $('download').onclick=()=>{if(!cues.length)return;const ts=t=>{let ms=Math.max(0,Math.round(t*1000));return `${Math.floor(ms/3600000).toString().padStart(2,'0')}:${(Math.floor(ms/60000)%60).toString().padStart(2,'0')}:${(Math.floor(ms/1000)%60).toString().padStart(2,'0')},${(ms%1000).toString().padStart(3,'0')}`};const srt=cues.map((c,i)=>`${i+1}\n${ts(c.start)} --> ${ts(c.end)}\n${c.zh}\n`).join('\n');const url=URL.createObjectURL(new Blob(['\ufeff'+srt],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='BESTie-261118.zh-Hant.srt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 
-let chromeTimer,scrubbing=false;
+let chromeTimer,scrubbing=false,nativeMode=false,playerGeneration=0,updateTimer,nativeCaptionsInitialized=false;
 const stage=$('stage'),chrome=$('viewer-chrome');
 function setChrome(show){
+ if(nativeMode){clearTimeout(chromeTimer);stage.classList.remove('controls-visible');chrome.inert=true;return}
  clearTimeout(chromeTimer);stage.classList.toggle('controls-visible',show);chrome.inert=!show;
  if(!show){$('viewer-panel').hidden=true;$('viewer-settings').setAttribute('aria-expanded','false');if(chrome.contains(document.activeElement))document.activeElement.blur()}
  if(show&&ready&&player.getPlayerState()===1&&$('viewer-panel').hidden&&!scrubbing)chromeTimer=setTimeout(()=>setChrome(false),2800);
@@ -60,11 +61,7 @@ function skipSeconds(delta){
  setChrome(true);
 }
 const gestures=createPlayerGestures({togglePlayback:()=>{$('play').click();setChrome(true)},seekBy:skipSeconds,onInteraction:()=>{$('viewer-panel').hidden=true;$('viewer-settings').setAttribute('aria-expanded','false');setChrome(true)}});
-let pointerStart=null;
-$('viewer-surface').addEventListener('pointerdown',e=>{pointerStart={x:e.clientX,y:e.clientY}});
-$('viewer-surface').addEventListener('pointercancel',()=>{pointerStart=null;gestures.reset()});
-$('viewer-surface').onclick=e=>{if(pointerStart&&Math.hypot(e.clientX-pointerStart.x,e.clientY-pointerStart.y)>18){pointerStart=null;return}pointerStart=null;const rect=stage.getBoundingClientRect();gestures.tap(e.clientX-rect.left,rect.width)};
-$('viewer-surface').addEventListener('dblclick',e=>e.preventDefault());
+bindPlayerSurface($('viewer-surface'),gestures);
 $('viewer-center-play').onclick=()=>{gestures.reset();$('play').click();setChrome(true)};
 $('viewer-settings').onclick=()=>{const open=$('viewer-panel').hidden;$('viewer-panel').hidden=!open;$('viewer-settings').setAttribute('aria-expanded',String(open));setChrome(true)};
 $('viewer-back').onclick=()=>skipSeconds(-5);
@@ -72,15 +69,43 @@ $('viewer-forward').onclick=()=>skipSeconds(5);
 $('viewer-play').onclick=()=>{$('play').click();setChrome(true)};
 $('viewer-seek').addEventListener('input',()=>{scrubbing=true;clearTimeout(chromeTimer);$('clock').textContent=`${fmt(Number($('viewer-seek').value))} / 41:55`});
 $('viewer-seek').addEventListener('change',()=>{seek(Number($('viewer-seek').value));scrubbing=false;setChrome(true)});
-chrome.addEventListener('pointerdown',()=>{gestures.reset();clearTimeout(chromeTimer)});
-chrome.addEventListener('pointerup',()=>setChrome(true));
-stage.addEventListener('pointermove',e=>{if(e.pointerType==='mouse')setChrome(true)});
+chrome.addEventListener('pointerdown',e=>{e.stopPropagation();gestures.reset();clearTimeout(chromeTimer)});
+chrome.addEventListener('pointerup',e=>{e.stopPropagation();setChrome(true)});
+chrome.addEventListener('click',e=>e.stopPropagation());
+chrome.addEventListener('dblclick',e=>{e.preventDefault();e.stopPropagation()});
+stage.addEventListener('pointermove',e=>{if(!nativeMode&&e.pointerType==='mouse'&&e.target===$('viewer-surface'))setChrome(true)});
 chrome.addEventListener('focusin',()=>setChrome(true));
 const landscape=matchMedia('(orientation: landscape) and (max-height: 600px)');
 function updateFocusView(){document.body.classList.toggle('focus-view',landscape.matches);setChrome(true)}
 landscape.addEventListener('change',updateFocusView);updateFocusView();
 iconButton('viewer-settings','gear','字幕設定');iconButton('viewer-back','back','倒退五秒');iconButton('viewer-forward','forward','快轉五秒');syncPlaybackUI();syncFullscreenUI();
 
-function hideNativeCaptions(){try{if(player&&player.getOptions().includes('captions'))player.unloadModule('captions')}catch{}}
-window.onYouTubeIframeAPIReady=()=>{player=new YT.Player('player',{videoId:'lZVbK5Iz-_A',playerVars:{controls:0,disablekb:1,playsinline:1,rel:0,fs:0,cc_load_policy:0,origin:location.origin},events:{onApiChange:hideNativeCaptions,onReady:()=>{ready=true;hideNativeCaptions();player.setPlaybackRate(Number($('speed').value));$('status').textContent='播放器已就緒。點一下播放或暫停；左右雙擊倒退或快轉 5 秒。齒輪可設定字幕。';setInterval(()=>update(),120)},onStateChange:e=>{if(e.data===1)hideNativeCaptions();$('play').textContent=e.data===1?'暫停':'播放';syncPlaybackUI();setChrome(true)},onError:e=>{$('status').textContent=`YouTube 播放器無法播放（${e.data}）。可用上方原片連結開啟，並下載中文字幕 SRT。`}}})};
+function hideNativeCaptions(){try{if(player&&player.getOptions().includes('captions')){player.unloadModule('captions');nativeCaptionsInitialized=true}}catch{}}
+function applyInputMode(){
+ const wrap=stage.querySelector('.video-wrap'),iframe=player?.getIframe?.();
+ stage.classList.toggle('native-mode',nativeMode);wrap.inert=!nativeMode;wrap.setAttribute('aria-hidden',String(!nativeMode));
+ if(iframe){iframe.inert=!nativeMode;iframe.tabIndex=nativeMode?0:-1}
+ $('viewer-surface').disabled=nativeMode;$('viewer-surface').inert=nativeMode;$('native-bar').hidden=!nativeMode;
+ setChrome(!nativeMode);
+}
+function changeInputMode(next){
+ if(next===nativeMode||!ready)return;
+ const time=player.getCurrentTime(),playing=player.getPlayerState()===1,rate=player.getPlaybackRate();
+ gestures.reset();scrubbing=false;$('viewer-panel').hidden=true;$('viewer-settings').setAttribute('aria-expanded','false');clearTimeout(chromeTimer);clearInterval(updateTimer);ready=false;nativeMode=next;
+ playerGeneration++;player.destroy();const host=document.createElement('div');host.id='player';stage.querySelector('.video-wrap').replaceChildren(host);player=null;
+ initPlayer({time,playing,rate});applyInputMode();
+}
+$('open-native').onclick=()=>changeInputMode(true);
+$('close-native').onclick=()=>changeInputMode(false);
+function initPlayer({time=0,playing=false,rate=Number($('speed').value)}={}){
+ const generation=++playerGeneration;nativeCaptionsInitialized=false;
+ player=new YT.Player('player',{videoId:'lZVbK5Iz-_A',playerVars:{controls:nativeMode?1:0,disablekb:nativeMode?0:1,playsinline:1,rel:0,fs:0,cc_load_policy:0,start:Math.floor(time),origin:location.origin},events:{
+ onApiChange:()=>{if(generation===playerGeneration&&(!nativeMode||!nativeCaptionsInitialized))hideNativeCaptions()},
+ onReady:()=>{if(generation!==playerGeneration)return;ready=true;hideNativeCaptions();player.setPlaybackRate(rate);if(time>0)player.seekTo(time,true);if(playing)player.playVideo();applyInputMode();syncPlaybackUI();$('status').textContent='點一下播放或暫停；左右雙擊移動 5 秒。齒輪內可進入 YouTube 畫質設定。';clearInterval(updateTimer);updateTimer=setInterval(()=>update(),120)},
+ onStateChange:e=>{if(generation!==playerGeneration)return;if(e.data===1&&(!nativeMode||!nativeCaptionsInitialized))hideNativeCaptions();$('play').textContent=e.data===1?'暫停':'播放';syncPlaybackUI();setChrome(true)},
+ onError:e=>{if(generation===playerGeneration)$('status').textContent=`YouTube 播放器無法播放（${e.data}）。可使用上方原片連結。`}
+ }});
+ applyInputMode();
+}
+window.onYouTubeIframeAPIReady=()=>initPlayer();
 fetch('subtitles.json').then(r=>{if(!r.ok)throw new Error('字幕載入失敗');return r.json()}).then(data=>{cues=data;render();update(true)}).catch(()=>{$('zh').textContent='字幕載入失敗，請重新整理頁面。';$('status').textContent='無法載入字幕檔案。'});const script=document.createElement('script');script.src='https://www.youtube.com/iframe_api';script.onerror=()=>{$('status').textContent='YouTube 播放器載入失敗，請檢查網路或使用原片連結。'};document.head.append(script);
