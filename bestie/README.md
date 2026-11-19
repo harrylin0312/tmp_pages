@@ -3,7 +3,7 @@
 獨立保存 BESTie 電台訪談觀看頁。影片使用 SBS 原始 YouTube 嵌入播放器，未包含影音檔案。
 
 - 原片：https://www.youtube.com/watch?v=lZVbK5Iz-_A
-- 現有觀看網址：https://bestie-radio-zh-261118.hichipipo.chatgpt.site?v=3
+- 現有觀看網址：https://harrylin0312.github.io/tmp_pages/bestie/
 - 727 段繁體中文字幕；韓文原文可選顯示。
 - 手機橫屏專注模式、浮動字幕、自動隱藏控制列。
 - 支援字幕大小、時間微調、播放速度、逐字稿搜尋跳轉與 SRT 下載。
@@ -28,4 +28,4 @@ python3 -m http.server 8765
 | `app.js` | 播放、同步字幕與控制邏輯 |
 | `subtitles.json` | 以秒計算的中韓字幕時間軸 |
 
-此頁位於 `temporary_webpages/bestie/`。`temporary_webpages` 是各類臨時網頁的集合，不會自動刪除。GitHub 儲存原始碼；既有 Sites 觀看網址的部署仍獨立管理。
+此頁位於 `tmp_pages/bestie/`。`tmp_pages` 是各類臨時網頁的集合，不會自動刪除。GitHub 儲存原始碼，並使用 GitHub Pages 發布觀看頁。
