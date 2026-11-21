@@ -99,13 +99,35 @@ function initPlayer({time=0,playing=false,rate=Number($('speed').value)}={}){
  const generation=++playerGeneration;nativeCaptionsInitialized=false;
  player=new YT.Player('player',{videoId:'prw6wJGJroI',playerVars:{controls:1,disablekb:0,playsinline:1,rel:0,fs:0,cc_load_policy:0,start:Math.floor(time),origin:location.origin},events:{
  onApiChange:()=>{if(generation===playerGeneration&&(!nativeMode||!nativeCaptionsInitialized))hideNativeCaptions()},
- onReady:()=>{if(generation!==playerGeneration)return;ready=true;hideNativeCaptions();player.setPlaybackRate(rate);if(time>0)player.seekTo(time,true);if(playing)player.playVideo();applyInputMode();syncPlaybackUI();$('status').textContent='點一下顯示或隱藏控制列；左右雙擊移動 5 秒。齒輪內可進入 YouTube 畫質設定。';clearInterval(updateTimer);updateTimer=setInterval(()=>update(),120)},
- onStateChange:e=>{if(generation!==playerGeneration)return;if(e.data===1&&(!nativeMode||!nativeCaptionsInitialized))hideNativeCaptions();$('play').textContent=e.data===1?'暫停':'播放';syncPlaybackUI();setChrome(true)},
+ onReady:()=>{if(generation!==playerGeneration)return;ready=true;hideNativeCaptions();player.setPlaybackRate(rate);if(playing)player.playVideo();applyInputMode();syncPlaybackUI();$('status').textContent='點一下顯示或隱藏控制列；左右雙擊移動 5 秒。齒輪內可進入 YouTube 畫質設定。';clearInterval(updateTimer);updateTimer=setInterval(()=>update(),120)},
+ onStateChange:e=>{if(generation!==playerGeneration)return;if(e.data===1)hasPlayed=true;if(e.data===2)saveProgress();if(e.data===0){saveProgress(true);hasPlayed=false}if(e.data===1&&(!nativeMode||!nativeCaptionsInitialized))hideNativeCaptions();$('play').textContent=e.data===1?'暫停':'播放';syncPlaybackUI();setChrome(true)},
  onError:e=>{if(generation===playerGeneration)$('status').textContent=`YouTube 播放器無法播放（${e.data}）。可使用上方原片連結。`}
  }});
  applyInputMode();
 }
-window.onYouTubeIframeAPIReady=()=>initPlayer();
+const progressKey='tmp-pages-progress:prw6wJGJroI';
+function readProgress(){
+ try {
+  const position=Number(localStorage.getItem(progressKey));
+  return Number.isFinite(position)&&position>=2&&position<duration-3?position:0;
+ } catch {return 0}
+}
+let hasPlayed=false;
+function saveProgress(ended=false){
+ if(!hasPlayed||!ready)return;
+ const position=player.getCurrentTime();
+ if(!Number.isFinite(position))return;
+ try {
+  if(ended||position>=duration-3)localStorage.removeItem(progressKey);
+  else if(position>=0)localStorage.setItem(progressKey,String(position));
+ } catch {}
+}
+window.addEventListener('pagehide',()=>saveProgress());
+document.addEventListener('visibilitychange',()=>{
+ if(document.visibilityState==='hidden')saveProgress();
+});
+setInterval(()=>{if(ready&&player.getPlayerState()===1)saveProgress()},3000);
+window.onYouTubeIframeAPIReady=()=>initPlayer({time:readProgress()});
 fetch('subtitles.json').then(r=>{if(!r.ok)throw new Error('字幕載入失敗');return r.json()}).then(data=>{cues=data;render();update(true)}).catch(()=>{$('zh').textContent='字幕載入失敗，請重新整理頁面。';$('status').textContent='無法載入字幕檔案。'});const script=document.createElement('script');script.src='https://www.youtube.com/iframe_api';script.onerror=()=>{$('status').textContent='YouTube 播放器載入失敗，請檢查網路或使用原片連結。'};document.head.append(script);
 
 function updateVideoLayout(){
