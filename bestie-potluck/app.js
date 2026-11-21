@@ -128,7 +128,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 setInterval(()=>{if(ready&&player.getPlayerState()===1)saveProgress()},3000);
 window.onYouTubeIframeAPIReady=()=>initPlayer({time:readProgress()});
-fetch('subtitles.json').then(r=>{if(!r.ok)throw new Error('字幕載入失敗');return r.json()}).then(data=>{cues=data;render();update(true)}).catch(()=>{$('zh').textContent='字幕載入失敗，請重新整理頁面。';$('status').textContent='無法載入字幕檔案。'});const script=document.createElement('script');script.src='https://www.youtube.com/iframe_api';script.onerror=()=>{$('status').textContent='YouTube 播放器載入失敗，請檢查網路或使用原片連結。'};document.head.append(script);
+fetch('subtitles.json?v=10').then(r=>{if(!r.ok)throw new Error('字幕載入失敗');return r.json()}).then(data=>{cues=data;render();update(true)}).catch(()=>{$('zh').textContent='字幕載入失敗，請重新整理頁面。';$('status').textContent='無法載入字幕檔案。'});const script=document.createElement('script');script.src='https://www.youtube.com/iframe_api';script.onerror=()=>{$('status').textContent='YouTube 播放器載入失敗，請檢查網路或使用原片連結。'};document.head.append(script);
 
 function updateVideoLayout(){
  const viewport=window.visualViewport,root=document.documentElement;
