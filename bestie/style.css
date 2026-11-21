@@ -117,3 +117,18 @@ body.focus-view #stage.native-mode{aspect-ratio:auto}
 /* Keep the source at 16:9 inside the actual visible Safari viewport. */
 body.focus-view #stage,#stage.theater{inset:auto!important;left:var(--viewport-left,0px);top:var(--viewport-top,0px);width:var(--viewport-width,100vw);height:var(--viewport-height,100dvh)}
 #stage.fitted-video .video-wrap{position:absolute!important;inset:auto!important;left:var(--video-left)!important;top:var(--video-top)!important;width:var(--video-width)!important;height:var(--video-height)!important;max-height:none!important;aspect-ratio:16/9!important;transform:none!important}
+
+/* Align the controls with the fitted image and keep both sides notch-safe. */
+#stage.fitted-video {
+ --control-gutter: max(12px, calc(env(safe-area-inset-left) - var(--video-left)), calc(env(safe-area-inset-right) - var(--video-left)));
+}
+#stage.fitted-video #viewer-chrome {
+ inset: var(--video-top) auto auto var(--video-left);
+ width: var(--video-width);
+ height: var(--video-height);
+}
+#stage.fitted-video .viewer-transport { padding-inline: var(--control-gutter); }
+#stage.fitted-video .viewer-top { right: calc(var(--control-gutter) + 42px); }
+@media (max-width: 420px) {
+ #stage.fitted-video .viewer-top { right: calc(var(--control-gutter) + 38px); }
+}
