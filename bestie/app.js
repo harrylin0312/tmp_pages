@@ -1,9 +1,34 @@
 'use strict';
-const $=id=>document.getElementById(id);let cues=[],player,ready=false,active=-1,buttons=[],query='',lastFollow=0;const duration=2515;const fmt=t=>`${Math.floor(Math.max(0,t)/60).toString().padStart(2,'0')}:${Math.floor(Math.max(0,t)%60).toString().padStart(2,'0')}`;
-let prefs={};try{prefs=JSON.parse(localStorage.getItem('bestie-prefs')||'{}')}catch{}
+const radio={id:'lZVbK5Iz-_A',duration:2515,language:'ko',label:'韓文',
+ title:'BESTie 電台訪談',edition:'SBS RADIO · 2026.11.18',
+ subtitles:'subtitles.json',prefs:'bestie-prefs',download:'BESTie-261118',
+ note:'依韓語原音辨識、翻譯並校訂；演唱段落顯示歌曲提示。'};
+const potluck={id:'prw6wJGJroI',duration:2026,language:'en',label:'英文',
+ title:'BESTie 聚餐特輯',edition:'꼰대희 · 2026.11.21',
+ subtitles:'potluck-subtitles.json',prefs:'bestie-potluck-prefs',download:'BESTie-potluck',
+ note:'依原片英文字幕的時間碼翻成繁體中文。中文為機器翻譯並局部校訂。'};
+const episode=new URLSearchParams(location.search).get('episode')==='potluck'?potluck:radio;
+
+const $=id=>document.getElementById(id);let cues=[],player,ready=false,active=-1,buttons=[],query='',lastFollow=0;const {duration}=episode;const fmt=t=>`${Math.floor(Math.max(0,t)/60).toString().padStart(2,'0')}:${Math.floor(Math.max(0,t)%60).toString().padStart(2,'0')}`;
+document.title=episode.title;
+$('episode-title').textContent=episode.title;
+$('episode-edition').textContent=episode.edition;
+$('episode-footer').textContent=episode.title;
+$('subtitle-note').textContent=episode.note;
+$('original-video').href='https://www.youtube.com/watch?v='+episode.id;
+$('viewer-seek').max=duration;
+$('clock').textContent='00:00 / '+fmt(duration);
+$('ko').lang=episode.language;
+$('bilingual-label').textContent=episode.label+'對照';
+$('search').placeholder='搜尋中文或'+episode.label+'內容';
+for(const link of document.querySelectorAll('[data-episode]')){
+ if(link.dataset.episode===(episode===potluck?'potluck':'radio'))link.setAttribute('aria-current','page');
+}
+
+let prefs={};try{prefs=JSON.parse(localStorage.getItem(episode.prefs)||'{}')}catch{}
 if(prefs.layoutVersion!==2){prefs.bilingual=false;prefs.size=20;prefs.layoutVersion=2}
 for(const id of ['bilingual','size','offset','speed','follow']){if(prefs[id]!==undefined){if($(id).type==='checkbox')$(id).checked=prefs[id];else $(id).value=prefs[id]}$(id).addEventListener('change',()=>{save();if(id==='bilingual')render();if(id==='speed'&&ready)player.setPlaybackRate(Number($('speed').value));update(true)})}
-function save(){for(const id of ['bilingual','size','offset','speed','follow'])prefs[id]=$(id).type==='checkbox'?$(id).checked:$(id).value;try{localStorage.setItem('bestie-prefs',JSON.stringify(prefs))}catch{}document.documentElement.style.setProperty('--caption-size',`${Number($('size').value)}px`);$('ko').hidden=!$('bilingual').checked;$('toggle-korean').textContent=$('bilingual').checked?'韓文：開':'韓文：關';$('toggle-korean').setAttribute('aria-pressed',String($('bilingual').checked))}
+function save(){for(const id of ['bilingual','size','offset','speed','follow'])prefs[id]=$(id).type==='checkbox'?$(id).checked:$(id).value;try{localStorage.setItem(episode.prefs,JSON.stringify(prefs))}catch{}document.documentElement.style.setProperty('--caption-size',`${Number($('size').value)}px`);$('ko').hidden=!$('bilingual').checked;$('toggle-korean').textContent=$('bilingual').checked?episode.label+'：開':episode.label+'：關';$('toggle-korean').setAttribute('aria-pressed',String($('bilingual').checked))}
 save();$('size').addEventListener('input',save);
 $('toggle-korean').onclick=()=>{$('bilingual').checked=!$('bilingual').checked;save();render();update(true)};
 for(const [id,delta] of [['smaller',-2],['larger',2]])$(id).onclick=()=>{$('size').value=Math.max(12,Math.min(32,Number($('size').value)+delta));save()};
@@ -38,10 +63,10 @@ document.addEventListener('keydown',e=>{
  if(e.key.toLowerCase()==='f'){e.preventDefault();$('fullscreen').click()}
 });
 function find(t){let lo=0,hi=cues.length-1,ans=-1;while(lo<=hi){const m=(lo+hi)>>1;if(cues[m].start<=t){ans=m;lo=m+1}else hi=m-1}return ans>=0&&t<cues[ans].end?ans:-1}
-function update(force=false){if(!ready&&!force)return;const time=ready?player.getCurrentTime():0;const t=time+(Number($('offset').value)||0);$('clock').textContent=`${fmt(time)} / 41:55`;if(!scrubbing)$('viewer-seek').value=time;const pct=Math.max(0,Math.min(100,time/duration*100));$('viewer-seek').style.setProperty('--played',`${pct}%`);const i=find(t);if(i!==active||force){if(active>=0)buttons[active]?.classList.remove('active');active=i;const cue=cues[i];$('zh').textContent=cue?cue.zh:(time>0?'（此處無對話或正在播放音樂）':'按下播放，字幕會隨影片顯示。');$('ko').textContent=cue?.ko||'';if(i>=0){const b=buttons[i];b?.classList.add('active');if(b&&$('follow').checked&&!query&&Date.now()-lastFollow>2000){const list=$('transcript');list.scrollTo({top:b.offsetTop-list.offsetTop-list.clientHeight/2+b.clientHeight/2,behavior:'smooth'})}}}}
-function render(){const frag=document.createDocumentFragment();buttons=[];let count=0;for(let i=0;i<cues.length;i++){const c=cues[i];if(query&&!`${c.zh} ${c.ko}`.toLowerCase().includes(query))continue;count++;const b=document.createElement('button');b.type='button';b.className='cue'+(i===active?' active':'');b.setAttribute('aria-label',`${fmt(c.start)} ${c.zh}`);const time=document.createElement('time');time.textContent=fmt(c.start);const body=document.createElement('span');body.textContent=c.zh;if($('bilingual').checked){const ko=document.createElement('small');ko.lang='ko';ko.textContent=c.ko;body.append(ko)}b.append(time,body);b.onclick=()=>seek(c.start-(Number($('offset').value)||0));buttons[i]=b;frag.append(b)}$('transcript').replaceChildren(frag);$('results').textContent=query?`找到 ${count} 段`:`共 ${cues.length} 段 · 點選文字即可跳轉`}
+function update(force=false){if(!ready&&!force)return;const time=ready?player.getCurrentTime():0;const t=time+(Number($('offset').value)||0);$('clock').textContent=`${fmt(time)} / ${fmt(duration)}`;if(!scrubbing)$('viewer-seek').value=time;const pct=Math.max(0,Math.min(100,time/duration*100));$('viewer-seek').style.setProperty('--played',`${pct}%`);const i=find(t);if(i!==active||force){if(active>=0)buttons[active]?.classList.remove('active');active=i;const cue=cues[i];$('zh').textContent=cue?cue.zh:(time>0?'（此處無對話或正在播放音樂）':'按下播放，字幕會隨影片顯示。');$('ko').textContent=cue?.[episode.language]||'';if(i>=0){const b=buttons[i];b?.classList.add('active');if(b&&$('follow').checked&&!query&&Date.now()-lastFollow>2000){const list=$('transcript');list.scrollTo({top:b.offsetTop-list.offsetTop-list.clientHeight/2+b.clientHeight/2,behavior:'smooth'})}}}}
+function render(){const frag=document.createDocumentFragment();buttons=[];let count=0;for(let i=0;i<cues.length;i++){const c=cues[i];if(query&&!`${c.zh} ${c[episode.language]}`.toLowerCase().includes(query))continue;count++;const b=document.createElement('button');b.type='button';b.className='cue'+(i===active?' active':'');b.setAttribute('aria-label',`${fmt(c.start)} ${c.zh}`);const time=document.createElement('time');time.textContent=fmt(c.start);const body=document.createElement('span');body.textContent=c.zh;if($('bilingual').checked){const ko=document.createElement('small');ko.lang=episode.language;ko.textContent=c[episode.language];body.append(ko)}b.append(time,body);b.onclick=()=>seek(c.start-(Number($('offset').value)||0));buttons[i]=b;frag.append(b)}$('transcript').replaceChildren(frag);$('results').textContent=query?`找到 ${count} 段`:`共 ${cues.length} 段 · 點選文字即可跳轉`}
 $('search').addEventListener('input',()=>{query=$('search').value.trim().toLowerCase();render()});$('transcript').addEventListener('wheel',()=>lastFollow=Date.now(),{passive:true});$('transcript').addEventListener('touchstart',()=>lastFollow=Date.now(),{passive:true});
-$('download').onclick=()=>{if(!cues.length)return;const ts=t=>{let ms=Math.max(0,Math.round(t*1000));return `${Math.floor(ms/3600000).toString().padStart(2,'0')}:${(Math.floor(ms/60000)%60).toString().padStart(2,'0')}:${(Math.floor(ms/1000)%60).toString().padStart(2,'0')},${(ms%1000).toString().padStart(3,'0')}`};const srt=cues.map((c,i)=>`${i+1}\n${ts(c.start)} --> ${ts(c.end)}\n${c.zh}\n`).join('\n');const url=URL.createObjectURL(new Blob(['\ufeff'+srt],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='BESTie-261118.zh-Hant.srt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+$('download').onclick=()=>{if(!cues.length)return;const ts=t=>{let ms=Math.max(0,Math.round(t*1000));return `${Math.floor(ms/3600000).toString().padStart(2,'0')}:${(Math.floor(ms/60000)%60).toString().padStart(2,'0')}:${(Math.floor(ms/1000)%60).toString().padStart(2,'0')},${(ms%1000).toString().padStart(3,'0')}`};const srt=cues.map((c,i)=>`${i+1}\n${ts(c.start)} --> ${ts(c.end)}\n${c.zh}\n`).join('\n');const url=URL.createObjectURL(new Blob(['\ufeff'+srt],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=episode.download+'.zh-Hant.srt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 
 let chromeTimer,scrubbing=false,nativeMode=false,playerGeneration=0,updateTimer,nativeCaptionsInitialized=false;
 const stage=$('stage'),chrome=$('viewer-chrome');
@@ -67,7 +92,7 @@ $('viewer-settings').onclick=()=>{const open=$('viewer-panel').hidden;$('viewer-
 $('viewer-back').onclick=()=>skipSeconds(-5);
 $('viewer-forward').onclick=()=>skipSeconds(5);
 $('viewer-play').onclick=()=>{$('play').click();setChrome(true)};
-$('viewer-seek').addEventListener('input',()=>{scrubbing=true;clearTimeout(chromeTimer);$('clock').textContent=`${fmt(Number($('viewer-seek').value))} / 41:55`});
+$('viewer-seek').addEventListener('input',()=>{scrubbing=true;clearTimeout(chromeTimer);$('clock').textContent=`${fmt(Number($('viewer-seek').value))} / ${fmt(duration)}`});
 $('viewer-seek').addEventListener('change',()=>{seek(Number($('viewer-seek').value));scrubbing=false;setChrome(true)});
 chrome.addEventListener('pointerdown',e=>{e.stopPropagation();gestures.reset();clearTimeout(chromeTimer)});
 chrome.addEventListener('pointerup',e=>{e.stopPropagation();setChrome(true)});
@@ -97,7 +122,7 @@ $('open-native').onclick=()=>changeInputMode(true);
 $('close-native').onclick=()=>changeInputMode(false);
 function initPlayer({time=0,playing=false,rate=Number($('speed').value)}={}){
  const generation=++playerGeneration;nativeCaptionsInitialized=false;
- player=new YT.Player('player',{videoId:'lZVbK5Iz-_A',playerVars:{controls:1,disablekb:0,playsinline:1,rel:0,fs:0,cc_load_policy:0,start:Math.floor(time),origin:location.origin},events:{
+ player=new YT.Player('player',{videoId:episode.id,playerVars:{controls:1,disablekb:0,playsinline:1,rel:0,fs:0,cc_load_policy:0,start:Math.floor(time),origin:location.origin},events:{
  onApiChange:()=>{if(generation===playerGeneration&&(!nativeMode||!nativeCaptionsInitialized))hideNativeCaptions()},
  onReady:()=>{if(generation!==playerGeneration)return;ready=true;hideNativeCaptions();player.setPlaybackRate(rate);if(playing)player.playVideo();applyInputMode();syncPlaybackUI();$('status').textContent='點一下顯示或隱藏控制列；左右雙擊移動 5 秒。齒輪內可進入 YouTube 畫質設定。';clearInterval(updateTimer);updateTimer=setInterval(()=>update(),120)},
  onStateChange:e=>{if(generation!==playerGeneration)return;if(e.data===1)hasPlayed=true;if(e.data===2)saveProgress();if(e.data===0){saveProgress(true);hasPlayed=false}if(e.data===1&&(!nativeMode||!nativeCaptionsInitialized))hideNativeCaptions();$('play').textContent=e.data===1?'暫停':'播放';syncPlaybackUI();setChrome(true)},
@@ -105,7 +130,7 @@ function initPlayer({time=0,playing=false,rate=Number($('speed').value)}={}){
  }});
  applyInputMode();
 }
-const progressKey='tmp-pages-progress:lZVbK5Iz-_A';
+const progressKey='tmp-pages-progress:'+episode.id;
 function readProgress(){
  try {
   const position=Number(localStorage.getItem(progressKey));
@@ -128,7 +153,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 setInterval(()=>{if(ready&&player.getPlayerState()===1)saveProgress()},3000);
 window.onYouTubeIframeAPIReady=()=>initPlayer({time:readProgress()});
-fetch('subtitles.json').then(r=>{if(!r.ok)throw new Error('字幕載入失敗');return r.json()}).then(data=>{cues=data;render();update(true)}).catch(()=>{$('zh').textContent='字幕載入失敗，請重新整理頁面。';$('status').textContent='無法載入字幕檔案。'});const script=document.createElement('script');script.src='https://www.youtube.com/iframe_api';script.onerror=()=>{$('status').textContent='YouTube 播放器載入失敗，請檢查網路或使用原片連結。'};document.head.append(script);
+fetch(episode.subtitles).then(r=>{if(!r.ok)throw new Error('字幕載入失敗');return r.json()}).then(data=>{cues=data;render();update(true)}).catch(()=>{$('zh').textContent='字幕載入失敗，請重新整理頁面。';$('status').textContent='無法載入字幕檔案。'});const script=document.createElement('script');script.src='https://www.youtube.com/iframe_api';script.onerror=()=>{$('status').textContent='YouTube 播放器載入失敗，請檢查網路或使用原片連結。'};document.head.append(script);
 
 function updateVideoLayout(){
  const viewport=window.visualViewport,root=document.documentElement;

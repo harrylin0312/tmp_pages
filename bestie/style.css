@@ -132,3 +132,5 @@ body.focus-view #stage,#stage.theater{inset:auto!important;left:var(--viewport-l
 @media (max-width: 420px) {
  #stage.fitted-video .viewer-top { right: calc(var(--control-gutter) + 38px); }
 }
+
+.episode-links{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}.episode-links a{padding:6px 10px;border-radius:6px;text-decoration:none;background:#fff1}.episode-links a[aria-current=page]{background:#c7b2ff;color:#211933}
